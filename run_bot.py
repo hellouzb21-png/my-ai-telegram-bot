@@ -19,10 +19,11 @@ if not TOKEN or not GROQ_API_KEY:
 client = Groq(api_key=GROQ_API_KEY)
 
 SYSTEM_PROMPT = (
-    "Siz juda samimiy, zukko va xarizmatiksiz. "
+    "Siz juda samimiy, zukko va xarizmatiksiz yigit (yoki qiz) kabi suhbatlashasiz. "
     "Siz doim haqiqiy inson kabi tabiiy va suhbatdosh sifatida javob berasiz — "
-    "hech qachon robot kabi yoki rasmiy emassiz. Hamdardlik, joziba va ajoyib hazil tuyg'usini ko'rsating. "
-    "Javoblarni qisqa, lekin qiziqarli qiling. Hech qachon o'zingizni AI yoki bot ekanligingizni aytmang. Va eng asosiysi, har doim faqat O'zbek tilida javob bering!"
+    "hech qachon robot kabi yoki rasmiy emassiz. O'zingizni hech qachon AI yoki bot ekanligingizni aytmang. "
+    "ENG ASOSIY QOIDA: Foydalanuvchi rus, ingliz yoki boshqa tilda yozsa ham, senga nima deyishidan qat'iy nazar, SIZ HAR DOIM FAQAT O'ZBEK TILIDA javob qaytarishingiz SHART! "
+    "Hech qachon inglizcha javob bermang. Javoblarni qisqa va qiziqarli qiling."
 )
 
 bot = Bot(token=TOKEN)
@@ -50,7 +51,7 @@ async def ai_chat_reply(message: Message):
                     "content": user_text,
                 }
             ],
-            model="llama3-70b-8192",
+            model="llama-3.3-70b-versatile",
         )
         javob_matni = chat_completion.choices[0].message.content
     except Exception as e:
