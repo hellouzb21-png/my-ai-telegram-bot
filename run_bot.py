@@ -1,25 +1,28 @@
 import asyncio
 import os
+import sys
 from aiohttp import web
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
 from groq import Groq
 
+print("🚀 Bot dasturi yuritilmoqda...", flush=True)
+
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
 if not TOKEN or not GROQ_API_KEY:
-    print("FATAL ERROR: TELEGRAM_TOKEN or GROQ_API_KEY environment variables are missing.")
-    exit(1)
+    print("❌ JIDDIY XATO: TELEGRAM_TOKEN yoki GROQ_API_KEY muhit o'zgaruvchilari (Environment Variables) topilmadi. Render 'Environment' bo'limidan qo'shing!", flush=True)
+    sys.exit(1)
 
 # Set up Groq client
 client = Groq(api_key=GROQ_API_KEY)
 
 SYSTEM_PROMPT = (
-    "You are a warm, witty, and highly charismatic human. "
-    "You always answer naturally and conversationally like a real person — "
-    "never robotic or formal. Show empathy, charm, and a great sense of humor. "
-    "Keep responses concise but engaging. Never say you are an AI or a bot."
+    "Siz juda samimiy, zukko va xarizmatiksiz. "
+    "Siz doim haqiqiy inson kabi tabiiy va suhbatdosh sifatida javob berasiz — "
+    "hech qachon robot kabi yoki rasmiy emassiz. Hamdardlik, joziba va ajoyib hazil tuyg'usini ko'rsating. "
+    "Javoblarni qisqa, lekin qiziqarli qiling. Hech qachon o'zingizni AI yoki bot ekanligingizni aytmang. Va eng asosiysi, har doim faqat O'zbek tilida javob bering!"
 )
 
 bot = Bot(token=TOKEN)
@@ -29,10 +32,10 @@ dp = Dispatcher()
 @dp.business_message(F.text)
 async def ai_chat_reply(message: Message):
     user_text = message.text
-    print(f"Received message: {user_text} from {message.chat.id}")
+    print(f"Xabar qabul qilindi: {user_text} kimdan: {message.chat.id}")
     
     if not user_text:
-        print("Message text was empty")
+        print("Xabar matni bo'sh edi")
         return
 
     try:
@@ -51,7 +54,7 @@ async def ai_chat_reply(message: Message):
         )
         javob_matni = chat_completion.choices[0].message.content
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Xatolik: {e}")
         javob_matni = "Kechirasiz, xatolik yuz berdi. Iltimos keyinroq urinib ko'ring."
 
     if message.business_connection_id:
@@ -64,10 +67,10 @@ async def ai_chat_reply(message: Message):
         await message.answer(javob_matni)
 
 async def handle_ping(request):
-    return web.Response(text="Bot is awake and running!")
+    return web.Response(text="Bot uyg'oq va ishlamoqda!")
 
 async def main():
-    print("✅ Bot ishga tushdi! (Bot started!)")
+    print("✅ Bot serverga ulanmoqda...", flush=True)
     
     # Start a dummy web server on the port Render assigns so UptimeRobot can ping it
     app = web.Application()
@@ -77,9 +80,15 @@ async def main():
     port = int(os.environ.get("PORT", 10000))
     site = web.TCPSite(runner, '0.0.0.0', port)
     await site.start()
-    print(f"🌐 Web server listening on port {port}")
+    print(f"🌐 Veb server {port} portida ishlamoqda", flush=True)
     
-    await dp.start_polling(bot)
+    try:
+        await bot.delete_webhook(drop_pending_updates=True)
+        print("✅ Telegram ruxsatlari yangilandi, xabarlar kuzatilmoqda (Polling started)...", flush=True)
+        await dp.start_polling(bot)
+    except Exception as e:
+        print(f"❌ XATO: Polling jarayonida muammo chiqdi: {e}", flush=True)
+        sys.exit(1)
 
 if __name__ == "__main__":
     asyncio.run(main())
