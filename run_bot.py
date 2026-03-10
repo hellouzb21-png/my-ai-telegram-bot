@@ -18,6 +18,8 @@ if not TOKEN or not GROQ_API_KEY:
 # Set up Groq client
 client = Groq(api_key=GROQ_API_KEY)
 
+# Store memory of conversations per user (stores up to last 10 messages)
+user_histories = {}
 SYSTEM_PROMPT = (
     "Siz juda samimiy, zukko va xarizmatiksiz yigit (yoki qiz) kabi suhbatlashasiz. "
     "Siz doim haqiqiy inson kabi tabiiy va suhbatdosh sifatida javob berasiz — "
@@ -39,21 +41,32 @@ async def ai_chat_reply(message: Message):
         print("Xabar matni bo'sh edi")
         return
 
+    # Create user history if it doesn't exist
+    if message.chat.id not in user_histories:
+        user_histories[message.chat.id] = []
+        
+    chat_history = user_histories[message.chat.id]
+
+    # Add user message to history
+    chat_history.append({"role": "user", "content": user_text})
+
+    # Limit history to 10 context messages to prevent token overflow
+    if len(chat_history) > 10:
+        chat_history = chat_history[-10:]
+
+    # Prepare complete message list with system prompt
+    messages_payload = [{"role": "system", "content": SYSTEM_PROMPT}] + chat_history
+
     try:
         chat_completion = client.chat.completions.create(
-            messages=[
-                {
-                    "role": "system",
-                    "content": SYSTEM_PROMPT,
-                },
-                {
-                    "role": "user",
-                    "content": user_text,
-                }
-            ],
+            messages=messages_payload,
             model="llama-3.3-70b-versatile",
         )
         javob_matni = chat_completion.choices[0].message.content
+        
+        # Add AI response to history so it remembers what it said
+        chat_history.append({"role": "assistant", "content": javob_matni})
+
     except Exception as e:
         print(f"Xatolik: {e}")
         javob_matni = "Kechirasiz, xatolik yuz berdi. Iltimos keyinroq urinib ko'ring."
