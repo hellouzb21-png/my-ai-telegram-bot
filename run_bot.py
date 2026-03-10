@@ -3,13 +3,17 @@ import os
 from aiohttp import web
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
-from google import genai
+from groq import Groq
 
-TOKEN = "8647815100:AAEESwCfqzFaiekOlMBOOoz77bcYjEY1yfY"
-GEMINI_API_KEY = "AIzaSyDyXBTxC-8X5DVgIfQ2M88AT2JMrRnMM2Q"
+TOKEN = os.environ.get("TELEGRAM_TOKEN")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
-# Set up Gemini client
-client = genai.Client(api_key=GEMINI_API_KEY)
+if not TOKEN or not GROQ_API_KEY:
+    print("FATAL ERROR: TELEGRAM_TOKEN or GROQ_API_KEY environment variables are missing.")
+    exit(1)
+
+# Set up Groq client
+client = Groq(api_key=GROQ_API_KEY)
 
 SYSTEM_PROMPT = (
     "You are a warm, witty, and highly charismatic human. "
@@ -32,11 +36,20 @@ async def ai_chat_reply(message: Message):
         return
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=f"{SYSTEM_PROMPT}\n\nUser: {user_text}",
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": SYSTEM_PROMPT,
+                },
+                {
+                    "role": "user",
+                    "content": user_text,
+                }
+            ],
+            model="llama3-70b-8192",
         )
-        javob_matni = response.text
+        javob_matni = chat_completion.choices[0].message.content
     except Exception as e:
         print(f"Error: {e}")
         javob_matni = "Kechirasiz, xatolik yuz berdi. Iltimos keyinroq urinib ko'ring."
