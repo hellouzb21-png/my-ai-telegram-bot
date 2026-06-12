@@ -11,7 +11,12 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 print("🚀 Bot dasturi yuritilmoqda...", flush=True)
 
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
+if TOKEN:
+    TOKEN = TOKEN.strip().strip("'\"")
+
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    GEMINI_API_KEY = GEMINI_API_KEY.strip().strip("'\"")
 
 if not TOKEN or not GEMINI_API_KEY:
     print("❌ JIDDIY XATO: TELEGRAM_TOKEN yoki GEMINI_API_KEY muhit o'zgaruvchilari (Environment Variables) topilmadi. Render 'Environment' bo'limidan qo'shing!", flush=True)
