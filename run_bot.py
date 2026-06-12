@@ -4,19 +4,20 @@ import sys
 from aiohttp import web
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
-from groq import Groq
+from google import genai
+from google.genai import types
 
 print("🚀 Bot dasturi yuritilmoqda...", flush=True)
 
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-if not TOKEN or not GROQ_API_KEY:
-    print("❌ JIDDIY XATO: TELEGRAM_TOKEN yoki GROQ_API_KEY muhit o'zgaruvchilari (Environment Variables) topilmadi. Render 'Environment' bo'limidan qo'shing!", flush=True)
+if not TOKEN or not GEMINI_API_KEY:
+    print("❌ JIDDIY XATO: TELEGRAM_TOKEN yoki GEMINI_API_KEY muhit o'zgaruvchilari (Environment Variables) topilmadi. Render 'Environment' bo'limidan qo'shing!", flush=True)
     sys.exit(1)
 
-# Set up Groq client
-client = Groq(api_key=GROQ_API_KEY)
+# Set up Gemini client
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 # Store memory of conversations per user (stores up to last 10 messages)
 user_histories = {}
@@ -54,15 +55,26 @@ async def ai_chat_reply(message: Message):
     if len(chat_history) > 10:
         chat_history = chat_history[-10:]
 
-    # Prepare complete message list with system prompt
-    messages_payload = [{"role": "system", "content": SYSTEM_PROMPT}] + chat_history
+    # Prepare Gemini Content objects
+    contents = []
+    for msg in chat_history:
+        role = "model" if msg["role"] == "assistant" else "user"
+        contents.append(
+            types.Content(
+                role=role,
+                parts=[types.Part.from_text(text=msg["content"])]
+            )
+        )
 
     try:
-        chat_completion = client.chat.completions.create(
-            messages=messages_payload,
-            model="llama-3.3-70b-versatile",
+        response = client.models.generate_content(
+            model="gemini-3.5-flash",
+            contents=contents,
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT
+            )
         )
-        javob_matni = chat_completion.choices[0].message.content
+        javob_matni = response.text
         
         # Add AI response to history so it remembers what it said
         chat_history.append({"role": "assistant", "content": javob_matni})
