@@ -6,6 +6,7 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
 from google import genai
 from google.genai import types
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
 print("🚀 Bot dasturi yuritilmoqda...", flush=True)
 
@@ -102,23 +103,54 @@ async def handle_ping(request):
 async def main():
     print("✅ Bot serverga ulanmoqda...", flush=True)
     
-    # Start a dummy web server on the port Render assigns so UptimeRobot can ping it
+    # Start web server
     app = web.Application()
     app.router.add_get('/', handle_ping)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    port = int(os.environ.get("PORT", 10000))
-    site = web.TCPSite(runner, '0.0.0.0', port)
-    await site.start()
-    print(f"🌐 Veb server {port} portida ishlamoqda", flush=True)
     
-    try:
-        await bot.delete_webhook(drop_pending_updates=True)
-        print("✅ Telegram ruxsatlari yangilandi, xabarlar kuzatilmoqda (Polling started)...", flush=True)
-        await dp.start_polling(bot)
-    except Exception as e:
-        print(f"❌ XATO: Polling jarayonida muammo chiqdi: {e}", flush=True)
-        sys.exit(1)
+    # Get Render external URL or port
+    render_external_url = os.environ.get("RENDER_EXTERNAL_URL")
+    port = int(os.environ.get("PORT", 10000))
+    
+    if render_external_url:
+        print(f"🌐 Webhook rejimi faollashtirildi. Tashqi URL: {render_external_url}", flush=True)
+        
+        # Setup Webhook request handler
+        webhook_requests_handler = SimpleRequestHandler(
+            dispatcher=dp,
+            bot=bot
+        )
+        webhook_requests_handler.register(app, path="/webhook")
+        setup_application(app, dp, bot=bot)
+        
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, '0.0.0.0', port)
+        await site.start()
+        print(f"🌐 Veb server {port} portida webhook bilan ishlamoqda", flush=True)
+        
+        # Set Webhook URL in Telegram
+        webhook_url = f"{render_external_url}/webhook"
+        await bot.set_webhook(webhook_url, drop_pending_updates=True)
+        print(f"✅ Webhook Telegramga ulandi: {webhook_url}", flush=True)
+        
+        # Keep running
+        await asyncio.Event().wait()
+    else:
+        print("🌐 Polling rejimi faollashtirildi (RENDER_EXTERNAL_URL topilmadi)", flush=True)
+        
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, '0.0.0.0', port)
+        await site.start()
+        print(f"🌐 Veb server {port} portida ishlamoqda", flush=True)
+        
+        try:
+            await bot.delete_webhook(drop_pending_updates=True)
+            print("✅ Telegram ruxsatlari yangilandi, xabarlar kuzatilmoqda (Polling started)...", flush=True)
+            await dp.start_polling(bot)
+        except Exception as e:
+            print(f"❌ XATO: Polling jarayonida muammo chiqdi: {e}", flush=True)
+            sys.exit(1)
 
 if __name__ == "__main__":
     asyncio.run(main())
